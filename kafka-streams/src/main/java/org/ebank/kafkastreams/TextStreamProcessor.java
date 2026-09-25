@@ -19,7 +19,29 @@ public class TextStreamProcessor {
                 .<String, String>stream("text-input")
                 .mapValues(value -> value.trim().replaceAll("\\s+", " ").toUpperCase());
 
-        cleanedStream.to("text-clean");
+        //cleanedStream.to("text-clean");
+
+        KStream<String, String> validStream = cleanedStream.filter(
+                (key, value) ->
+                        !value.isEmpty()
+                                && value.length() <= 100
+                                && !value.contains("HACK")
+                                && !value.contains("SPAM")
+                                && !value.contains("XXX")
+                     );
+        validStream.to("text-clean");
+
+        //gérer message invalides
+        KStream<String, String> invalidStream = cleanedStream.filter(
+                (key, value) ->
+                        value.isEmpty()
+                                || value.length() > 100
+                                || value.contains("HACK")
+                                || value.contains("SPAM")
+                                || value.contains("XXX")
+        );
+
+        invalidStream.to("text-dead-letter");
         return cleanedStream;
     }
 }
